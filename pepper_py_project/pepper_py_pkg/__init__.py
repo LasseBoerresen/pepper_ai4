@@ -2,6 +2,7 @@ import math
 import numpy as np
 import scipy as sp
 from scipy import ndimage, misc
+import random
 import skimage
 from skimage import data, filter, io
 import matplotlib.pyplot as plt
@@ -23,7 +24,15 @@ class autoEncoder:
         self.Z = []        
         self.A = []
         self.E = []
-        
+
+
+    def train(self,traningSet):       
+        for i in range(trainingSet.shape[1]):
+            #train with image i (i.e. column i of trainingSet)            
+            #First calculate activations of each layer   
+            self.feedForward(trainingSet.T[i])
+            self.backProbagation()
+            
     
     def feedForward(self,x):
         #iterate feed forward over each layer
@@ -37,7 +46,7 @@ class autoEncoder:
         #calculate activations for each layer
         for i in range(self.numHidden + 1):
             #calculate raw activations
-            self.Z.append( (self.A[i].dot( self.W[i] ))+B[i] )#1x64 dot 64x32 -> 1x32 
+            self.Z.append( (self.A[i].dot( self.W[i] ))+B[i] )#1x64 dot 64x32 + 1x32-> 1x32 
             #initialize activation list
             a = []           
             #calculate sigmoid for every entry in the latest entry in Z
@@ -49,8 +58,8 @@ class autoEncoder:
 
     def backPropagation(self):
         self.E = []
-        #calculate error for output layer first        
-        e = []   
+        #firstly, calculate error for the output layer       
+        e = []
         #for all elements of output layer, calculate error derivative, e = delta.
         for j in range(self.nn[-1]):
             #error for each output node given by: e^(n_l) = <(y-a^(l)),f'(z^(n_l)>, with f'() given by the derivative of the sigmoid function: f'(z) a^(l)*(1-a^(l))
@@ -58,7 +67,7 @@ class autoEncoder:
         
         self.E.append(e)
         
-        
+        #use output layer error for consecutive errorprobagation layer for layer
         for i in range(self.numHidden):
             e = []            
                 
@@ -90,16 +99,19 @@ class imageCleaver:
 #        print(patchDataBase)
 #        plt.imshow(patchDataBase[0])    
         
-        
+
+    #to use the images most easily for inputs to a NN, they are unravelled from 8x8 to 64x1,
+    #and then concatenated so each column is another image.        
     def concatenateImages(self):        
 #        imgArray = np.array([[]])
         concImgArrayT = np.transpose(self.concImgArray)
         
         for i in range(self.numPatches):     
-            
             concImgArrayT[i] = self.patchDataBase[i].ravel()
         self.concImgArray = np.transpose(concImgArrayT)
         print(self.concImgArray.shape)
+#        plt.imshow(self.patchDataBase[0],cmap=plt.cm.gray)
+#        plt.imshow(self.imageDataBase[0],cmap=plt.cm.gray)
 #        print(concImgArrayT)
 #            for j in range(self.sizePatches):
 #                for k in range(self.sizePatches):
