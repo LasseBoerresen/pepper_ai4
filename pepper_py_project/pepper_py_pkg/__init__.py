@@ -90,8 +90,8 @@ class autoEncoder:
 class imageCleaver:
     def __init__(self):
         self.numImages = 1
-        self.numPatches = 1000
-        self.sizePatches = 8#8
+        self.numPatches = 20
+        self.sizePatches = 2#8 must be equal number, to be able to split in half later
         self.imageDataBase = [misc.lena()]
         self.patchDataBase = []
         self.concImgArray = np.zeros((self.sizePatches*self.sizePatches,self.numPatches))
@@ -145,13 +145,13 @@ def main():
     
     #instantiate NN with size as defined in image cleaver class. 
     #TODO: size should be input to imageCleaver class.
-    net = buildNetwork(myCleaver.sizePatches*myCleaver.sizePatches, myCleaver.sizePatches*myCleaver.sizePatches/4, myCleaver.sizePatches*myCleaver.sizePatches, bias = True)
+    net = buildNetwork(myCleaver.sizePatches*myCleaver.sizePatches, (myCleaver.sizePatches*myCleaver.sizePatches)/2.0, myCleaver.sizePatches*myCleaver.sizePatches, bias = True)
 
 #    print(net.activate([2, 1]))
     #Put imageCleaver dataset into pyBrain dataset format.
     ds = SupervisedDataSet(myCleaver.sizePatches*myCleaver.sizePatches, myCleaver.sizePatches*myCleaver.sizePatches)
     for i in range(myCleaver.concImgArray.shape[1]):
-        ds.addSample(myCleaver.concImgArray.T[i],myCleaver.concImgArray.T[i])
+        ds.addSample(myCleaver.concImgArray.T[i]/256.0,myCleaver.concImgArray.T[i]/256.0)
     
 #    for inpt, target in ds:
 #        print inpt, target
@@ -165,21 +165,95 @@ def main():
 #    print(trainer.train())
 #    print(trainer.train())
 #    print(trainer.train())
-    for i in range(3):    
-        print(trainer.train())
+#    for i in range(20):    
+#        print(trainer.train())
     #print(len(myCleaver.patchDataBase))    
     #print(myCleaver.getImages)
     #getTrainingSet()
-    #fig, axes = plt.subplots(2, 1, figsize=(12, 6), subplot_kw={'xticks': [], 'yticks': []}) 
-    #fig.subplots_adjust(hspace=0.3, wspace=0.05)
 
-    #plt.imshow(myCleaver.patchDataBase[45],cmap=plt.cm.gray)
-
-    imitationActivations = np.array(net.activate(myCleaver.concImgArray.T[45]))
-    imitation = np.reshape(imitationActivations,(8,8))
-    plt.imshow(imitation,cmap=plt.cm.gray)
-    #plt.show()
+    print 'np.array(net.activate(myCleaver.concImgArray.T[0]/256.0))'
+    print net.activate(myCleaver.concImgArray.T[0]/256.0)
+    print 'np.array(net.activate(myCleaver.concImgArray.T[1]/256.0))'
+    print net.activate(myCleaver.concImgArray.T[1]/256.0)
+    print('')  
     
+    print('the two inputs')
+    print(ds.getSample(0))
+    print(ds.getSample(1))   
+    print('')
+    
+    print('original inputs')
+    print(myCleaver.concImgArray.T[0]/256.0)
+    print(myCleaver.concImgArray.T[1]/256.0)
+    print('')
+    
+    print('first activation')    
+    print(net.activate(myCleaver.concImgArray.T[0]/256.0))
+    print('second activation')  
+    print(net.activate(myCleaver.concImgArray.T[1]/256.0))
+
+    
+    imitationActivations = net.activate(myCleaver.concImgArray.T[0]/256.0)
+    imitation = np.reshape(imitationActivations,(myCleaver.sizePatches,myCleaver.sizePatches))
+    
+
+    plt.figure(1)
+    plt.title('Input vs output')
+    
+    plt.subplot(211)
+    plt.imshow(myCleaver.patchDataBase[0],cmap=plt.cm.gray, interpolation='nearest')
+    plt.title('input')
+        
+    plt.subplot(212)
+    plt.imshow(imitation*256,cmap=plt.cm.gray, interpolation='nearest')
+    plt.title('imitation')    
+    
+    plt.show()
+    
+    
+
+    imitationActivations2 = net.activate(myCleaver.concImgArray.T[1]/256.0)
+    imitation2 = np.reshape(imitationActivations2,(myCleaver.sizePatches,myCleaver.sizePatches))
+    
+    plt.figure(2)
+    plt.title('Input vs output')
+    
+    plt.subplot(211)
+    plt.imshow(myCleaver.patchDataBase[1],cmap=plt.cm.gray, interpolation='nearest')
+    plt.title('input')
+
+    plt.subplot(212)
+    plt.imshow(imitation2*256,cmap=plt.cm.gray, interpolation='nearest')
+    plt.title('imitation')    
+    
+    plt.show()
+#    
+#    print(net.params)
+#    print(net)
+#    print(net.outmodules)    
+#    
+#    
+#    net = buildNetwork(4,2,4, bias = True)
+#    print('simple net activation')    
+#    print(net.activate((1,2,3,4)))
+#    print('simple net activation2')    
+#    print(net.activate((5,4,3,2)))    
+#    print('')
+#    
+#    for mod in net.modules:
+#      print "Module:", mod.name
+#      if mod.paramdim > 0:
+#        print "--parameters:", mod.params
+#      for conn in net.connections[mod]:
+#        print "-connection to", conn.outmod.name
+#        if conn.paramdim > 0:
+#           print "- parameters", conn.params
+#      if hasattr(net, "recurrentConns"):
+#        print "Recurrent connections"
+#        for conn in net.recurrentConns:             
+#           print "-", conn.inmod.name, " to", conn.outmod.name
+#           if conn.paramdim > 0:
+#              print "- parameters", conn.params    
     
 if __name__ == '__main__':
     main()
