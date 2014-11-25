@@ -7,6 +7,11 @@ import skimage
 from skimage import data, filter, io
 import matplotlib.pyplot as plt
 
+from pybrain.tools.shortcuts import buildNetwork
+from pybrain.datasets import SupervisedDataSet
+from pybrain.supervised.trainers import BackpropTrainer
+
+
 #shallow sparse autoencoder, with inputlayer, hiddenLayer, and output. 
 #Uses backpropagatimport matplotlib.pyplot as pltion to train identity function for input, given a set of 8x8 images sampled from larger images. .
 # a = w*x
@@ -70,7 +75,7 @@ class autoEncoder:
         #use output layer error for consecutive errorprobagation layer for layer
         for i in range(self.numHidden):
             e = []            
-                
+            
             self.E.append(np.array(e))
 
 
@@ -85,8 +90,8 @@ class autoEncoder:
 class imageCleaver:
     def __init__(self):
         self.numImages = 1
-        self.numPatches = 3
-        self.sizePatches = 8
+        self.numPatches = 1000
+        self.sizePatches = 8#8
         self.imageDataBase = [misc.lena()]
         self.patchDataBase = []
         self.concImgArray = np.zeros((self.sizePatches*self.sizePatches,self.numPatches))
@@ -109,7 +114,7 @@ class imageCleaver:
         for i in range(self.numPatches):     
             concImgArrayT[i] = self.patchDataBase[i].ravel()
         self.concImgArray = np.transpose(concImgArrayT)
-        print(self.concImgArray.shape)
+#        print(self.concImgArray.shape)
 #        plt.imshow(self.patchDataBase[0],cmap=plt.cm.gray)
 #        plt.imshow(self.imageDataBase[0],cmap=plt.cm.gray)
 #        print(concImgArrayT)
@@ -120,11 +125,61 @@ class imageCleaver:
 
     def getImages(self):    
         return 3
+        
+#    def showImageGrid(self):
+#       #http://matplotlib.org/examples/images_contours_and_fields/interpolation_methods.html
+#       fig, axes = plt.subplots(3, 6, figsize=(12, 6), subplot_kw={'xticks': [], 'yticks': []}) 
+#       fig.subplots_adjust(hspace=0.3, wspace=0.05)
+#       for ax, interp_method in zip(axes.flat, methods):
+#           ax.imshow(grid, interpolation=interp_method)
+#           ax.set_title(interp_method)
+#
+#        plt.show()
+#        return 1
+
+
 
 def main():
+    #sample patches from image database
     myCleaver = imageCleaver()
+    
+    #instantiate NN with size as defined in image cleaver class. 
+    #TODO: size should be input to imageCleaver class.
+    net = buildNetwork(myCleaver.sizePatches*myCleaver.sizePatches, myCleaver.sizePatches*myCleaver.sizePatches/4, myCleaver.sizePatches*myCleaver.sizePatches, bias = True)
+
+#    print(net.activate([2, 1]))
+    #Put imageCleaver dataset into pyBrain dataset format.
+    ds = SupervisedDataSet(myCleaver.sizePatches*myCleaver.sizePatches, myCleaver.sizePatches*myCleaver.sizePatches)
+    for i in range(myCleaver.concImgArray.shape[1]):
+        ds.addSample(myCleaver.concImgArray.T[i],myCleaver.concImgArray.T[i])
+    
+#    for inpt, target in ds:
+#        print inpt, target
+    
+    trainer = BackpropTrainer(net, ds)    
+    print("activation: ")
+    print()
+#    print(net.activate([2, 1]))    
+#    print(trainer.train())
+#    print(trainer.train())
+#    print(trainer.train())
+#    print(trainer.train())
+#    print(trainer.train())
+    for i in range(3):    
+        print(trainer.train())
+    #print(len(myCleaver.patchDataBase))    
     #print(myCleaver.getImages)
     #getTrainingSet()
+    #fig, axes = plt.subplots(2, 1, figsize=(12, 6), subplot_kw={'xticks': [], 'yticks': []}) 
+    #fig.subplots_adjust(hspace=0.3, wspace=0.05)
 
+    #plt.imshow(myCleaver.patchDataBase[45],cmap=plt.cm.gray)
+
+    imitationActivations = np.array(net.activate(myCleaver.concImgArray.T[45]))
+    imitation = np.reshape(imitationActivations,(8,8))
+    plt.imshow(imitation,cmap=plt.cm.gray)
+    #plt.show()
+    
+    
 if __name__ == '__main__':
     main()
