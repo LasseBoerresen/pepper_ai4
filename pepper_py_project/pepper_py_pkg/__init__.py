@@ -1,4 +1,6 @@
+import os
 import math
+import time
 import numpy as np
 import scipy as sp
 from scipy import ndimage, misc
@@ -7,9 +9,14 @@ import skimage
 from skimage import data, filter, io
 import matplotlib.pyplot as plt
 
+import pickle
+
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer
+from pybrain.structure import FeedForwardNetwork, LinearLayer, SigmoidLayer, FullConnection
+#from pybrain.tools.xml.networkwriter import NetworkWriter
+#from pybrain.tools.xml.networkreader import NetworkReader
 
 
 #shallow sparse autoencoder, with inputlayer, hiddenLayer, and output. 
@@ -90,8 +97,8 @@ class autoEncoder:
 class imageCleaver:
     def __init__(self):
         self.numImages = 1
-        self.numPatches = 20
-        self.sizePatches = 2#8 must be equal number, to be able to split in half later
+        self.numPatches = 5000
+        self.sizePatches = 8#8 must be equal number, to be able to split in half later
         self.imageDataBase = [misc.lena()]
         self.patchDataBase = []
         self.concImgArray = np.zeros((self.sizePatches*self.sizePatches,self.numPatches))
@@ -137,6 +144,40 @@ class imageCleaver:
 #        plt.show()
 #        return 1
 
+def printNetwork(net):
+    for mod in net.modules:
+      print "Module:", mod.name
+      if mod.paramdim > 0:
+        print "--parameters:", mod.params
+      for conn in net.connections[mod]:
+        print "-connection to", conn.outmod.name
+        if conn.paramdim > 0:
+           print "- parameters", conn.params
+      if hasattr(net, "recurrentConns"):
+        print "Recurrent connections"
+        for conn in net.recurrentConns:             
+           print "-", conn.inmod.name, " to", conn.outmod.name
+           if conn.paramdim > 0:
+              print "- parameters", conn.params
+
+#def saveNetParamsToFile(net):
+#    f = open('netParams.txt', 'w')
+#    for i in range(len(net.params)):
+#        f.write(str(net.params[i]))
+#        f.write('\n')
+#    f.close()
+#
+#def loadNetParamsFromFile(net):
+#    f = open('netParams.txt', 'r')
+#    paramsArr = []    
+#    for i in range(len(net.params)):
+#        float(f.readline())
+#        paramsArr.append(0.0)#(float(f.readline()))
+#    net.__setattr__('params', paramsArr)
+#    print net.params
+#    f.close()
+
+
 
 
 def main():
@@ -145,7 +186,29 @@ def main():
     
     #instantiate NN with size as defined in image cleaver class. 
     #TODO: size should be input to imageCleaver class.
-    net = buildNetwork(myCleaver.sizePatches*myCleaver.sizePatches, (myCleaver.sizePatches*myCleaver.sizePatches)/2.0, myCleaver.sizePatches*myCleaver.sizePatches, bias = True)
+#    net = buildNetwork(myCleaver.sizePatches*myCleaver.sizePatches, (myCleaver.sizePatches*myCleaver.sizePatches)/2.0, myCleaver.sizePatches*myCleaver.sizePatches, bias = True)
+    net = FeedForwardNetwork()
+    inLayer = LinearLayer(myCleaver.sizePatches*myCleaver.sizePatches)
+    hiddenLayer = SigmoidLayer((myCleaver.sizePatches*myCleaver.sizePatches)/4.0)
+    outLayer = LinearLayer(myCleaver.sizePatches*myCleaver.sizePatches)
+    
+    net.addInputModule(inLayer)
+    net.addModule(hiddenLayer)
+    net.addOutputModule(outLayer)
+    
+    
+    in_to_hidden = FullConnection(inLayer, hiddenLayer)
+    hidden_to_out = FullConnection(hiddenLayer, outLayer)
+
+    net.addConnection(in_to_hidden)
+    net.addConnection(hidden_to_out)
+
+    net.sortModules()
+
+#    fileObject = open('pickledNet.dat','r')
+#    net = pickle.load(fileObject)
+#    fileObject.close()
+#    net = NetworkReader.readFrom('filename.xml') 
 
 #    print(net.activate([2, 1]))
     #Put imageCleaver dataset into pyBrain dataset format.
@@ -155,43 +218,21 @@ def main():
     
 #    for inpt, target in ds:
 #        print inpt, target
+
+    
     
     trainer = BackpropTrainer(net, ds)    
-    print("activation: ")
-    print()
-#    print(net.activate([2, 1]))    
-#    print(trainer.train())
-#    print(trainer.train())
-#    print(trainer.train())
-#    print(trainer.train())
-#    print(trainer.train())
-#    for i in range(20):    
-#        print(trainer.train())
-    #print(len(myCleaver.patchDataBase))    
-    #print(myCleaver.getImages)
-    #getTrainingSet()
+    for i in range(10):    
+        print(trainer.train())
 
-    print 'np.array(net.activate(myCleaver.concImgArray.T[0]/256.0))'
-    print net.activate(myCleaver.concImgArray.T[0]/256.0)
-    print 'np.array(net.activate(myCleaver.concImgArray.T[1]/256.0))'
-    print net.activate(myCleaver.concImgArray.T[1]/256.0)
-    print('')  
-    
-    print('the two inputs')
-    print(ds.getSample(0))
-    print(ds.getSample(1))   
-    print('')
-    
-    print('original inputs')
-    print(myCleaver.concImgArray.T[0]/256.0)
-    print(myCleaver.concImgArray.T[1]/256.0)
-    print('')
-    
-    print('first activation')    
-    print(net.activate(myCleaver.concImgArray.T[0]/256.0))
-    print('second activation')  
-    print(net.activate(myCleaver.concImgArray.T[1]/256.0))
 
+    fileObject = open('./pickledNet.dat', 'w')
+    pickle.dump(net, fileObject)
+    fileObject.close()
+#    NetworkWriter.writeToFile(net, 'testNetwork8.xml')   
+        
+#    saveNetParamsToFile(net)  
+#    loadNetParamsFromFile(net)    
     
     imitationActivations = net.activate(myCleaver.concImgArray.T[0]/256.0)
     imitation = np.reshape(imitationActivations,(myCleaver.sizePatches,myCleaver.sizePatches))
@@ -200,34 +241,107 @@ def main():
     plt.figure(1)
     plt.title('Input vs output')
     
-    plt.subplot(211)
-    plt.imshow(myCleaver.patchDataBase[0],cmap=plt.cm.gray, interpolation='nearest')
+    plt.subplot(221)
+    plt.imshow(myCleaver.patchDataBase[0],cmap=plt.cm.gray, interpolation='nearest',  vmin=0, vmax=256)
     plt.title('input')
         
-    plt.subplot(212)
-    plt.imshow(imitation*256,cmap=plt.cm.gray, interpolation='nearest')
+    plt.subplot(223)
+    plt.imshow(imitation*256,cmap=plt.cm.gray, interpolation='nearest', vmin=0, vmax=256)
     plt.title('imitation')    
     
-    plt.show()
-    
+##    plt.show()
+#    print 'imitation'
+#    print imitation*256    
     
 
     imitationActivations2 = net.activate(myCleaver.concImgArray.T[1]/256.0)
     imitation2 = np.reshape(imitationActivations2,(myCleaver.sizePatches,myCleaver.sizePatches))
     
-    plt.figure(2)
-    plt.title('Input vs output')
+#    plt.figure(2)
+#    plt.title('Input vs output2')
     
-    plt.subplot(211)
-    plt.imshow(myCleaver.patchDataBase[1],cmap=plt.cm.gray, interpolation='nearest')
-    plt.title('input')
+    plt.subplot(222)
+    plt.imshow(myCleaver.patchDataBase[1],cmap=plt.cm.gray, interpolation='nearest', vmin=0, vmax=256)
+    plt.title('input2')
 
-    plt.subplot(212)
-    plt.imshow(imitation2*256,cmap=plt.cm.gray, interpolation='nearest')
-    plt.title('imitation')    
     
-    plt.show()
+    plt.subplot(224)
+    plt.imshow(imitation2*256,cmap=plt.cm.gray, interpolation='nearest', vmin=0, vmax=256)
+    plt.title('imitation2')    
+    
+##    plt.subplot_tool()
+#    plt.show()
+#    print 'imitation2'
+#    print imitation2*256#   
+
+
+
+
+    #################################################################
+    #calculate and show each hidden nodes learned function, i.e. which input vector maximally excites the hidden node, with constrain ||x||^2 <=1
+    #################################################################
+    
+    learned = []
+    
+    #convert dims from float to integer    
+    i2hid = int(in_to_hidden.indim)
+    i2hod = int(in_to_hidden.outdim)
+    print i2hid
+    print i2hod
+    #fo through each hidden node
+    for i in range(i2hod):
+            
+        one_learned  = []         
+        sumOfWeights = 0
+        #go through weights for the ith hidden node, sum weights        
+        for j in range(i2hid):
+                #add to sum, the value of connection between input                
+                sumOfWeights += (in_to_hidden.params[i*i2hid + j])**2        
+        
+        #for each input, calculate effect on hidden node by summing all om inputs        
+        for j in range(i2hid):
+            one_learned.append(in_to_hidden.params[i*i2hid + j]/math.sqrt(sumOfWeights))
+            
+        learned.append(one_learned)
+        
+    
+
+    
+    fig3, axes = plt.subplots(nrows=int(math.sqrt(len(learned))), ncols=(int(math.sqrt(len(learned)))))
+    for dat, ax in zip(learned, axes.flat):
+        # The vmin and vmax arguments specify the color limits
+        im = ax.imshow(np.reshape(dat,(myCleaver.sizePatches,myCleaver.sizePatches)), cmap=plt.cm.gray, interpolation='nearest')
+
+    #print(len(myCleaver.patchDataBase))    
+    #print(myCleaver.getImages)
+    #getTrainingSet()
+
+#    print 'np.array(net.activate(myCleaver.concImgArray.T[0]/256.0))'
+#    print net.activate(myCleaver.concImgArray.T[0]/256.0)
+#    print 'np.array(net.activate(myCleaver.concImgArray.T[1]/256.0))'
+#    print net.activate(myCleaver.concImgArray.T[1]/256.0)
+#    print('')  
 #    
+#    print('the two inputs')
+#    print(ds.getSample(0))
+#    print(ds.getSample(1))   
+#    print('')
+#    
+#    print('original inputs')
+#    print(myCleaver.concImgArray.T[0]/256.0)
+#    print(myCleaver.concImgArray.T[1]/256.0)
+#    print('')
+#    
+#    print('first activation')    
+#    print(net.activate(myCleaver.concImgArray.T[0]/256.0))
+#    print('second activation')  
+#    print(net.activate(myCleaver.concImgArray.T[1]/256.0))
+
+    
+
+
+
+
 #    print(net.params)
 #    print(net)
 #    print(net.outmodules)    
