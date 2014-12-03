@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 import pickle
 
+
+
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.datasets import SupervisedDataSet
 from pybrain.supervised.trainers import BackpropTrainer
@@ -98,7 +100,7 @@ class imageCleaver:
     def __init__(self):
         self.numImages = 1
         self.numPatches = 5000
-        self.sizePatches = 8#8 must be equal number, to be able to split in half later
+        self.sizePatches = 4#8 must be equal number, to be able to split in half later
         self.imageDataBase = [misc.lena()]
         self.patchDataBase = []
         self.concImgArray = np.zeros((self.sizePatches*self.sizePatches,self.numPatches))
@@ -222,13 +224,13 @@ def main():
     
     
     trainer = BackpropTrainer(net, ds)    
-    for i in range(10):    
+    for i in range(1):    
         print(trainer.train())
 
 
-    fileObject = open('./pickledNet.dat', 'w')
-    pickle.dump(net, fileObject)
-    fileObject.close()
+#    fileObject = open('pickledNet.dat', 'w')
+#    pickle.dump(net, fileObject)
+#    fileObject.close()
 #    NetworkWriter.writeToFile(net, 'testNetwork8.xml')   
         
 #    saveNetParamsToFile(net)  
@@ -270,7 +272,7 @@ def main():
     plt.title('imitation2')    
     
 ##    plt.subplot_tool()
-#    plt.show()
+    plt.show()
 #    print 'imitation2'
 #    print imitation2*256#   
 
@@ -288,20 +290,21 @@ def main():
     i2hod = int(in_to_hidden.outdim)
     print i2hid
     print i2hod
-    #fo through each hidden node
+    #go through each hidden node
     for i in range(i2hod):
-            
+        print('i: ', i)    
         one_learned  = []         
         sumOfWeights = 0
         #go through weights for the ith hidden node, sum weights        
         for j in range(i2hid):
-                #add to sum, the value of connection between input                
-                sumOfWeights += (in_to_hidden.params[i*i2hid + j])**2        
-        
+            print('j1: ', j)
+            #add to sum, the value of connection between input                
+            sumOfWeights += (in_to_hidden.params[i*i2hid + j])**2        
+    
         #for each input, calculate effect on hidden node by summing all om inputs        
         for j in range(i2hid):
+            print('j2: ', j)
             one_learned.append(in_to_hidden.params[i*i2hid + j]/math.sqrt(sumOfWeights))
-            
         learned.append(one_learned)
         
     
@@ -354,20 +357,20 @@ def main():
 #    print(net.activate((5,4,3,2)))    
 #    print('')
 #    
-#    for mod in net.modules:
-#      print "Module:", mod.name
-#      if mod.paramdim > 0:
-#        print "--parameters:", mod.params
-#      for conn in net.connections[mod]:
-#        print "-connection to", conn.outmod.name
-#        if conn.paramdim > 0:
-#           print "- parameters", conn.params
-#      if hasattr(net, "recurrentConns"):
-#        print "Recurrent connections"
-#        for conn in net.recurrentConns:             
-#           print "-", conn.inmod.name, " to", conn.outmod.name
-#           if conn.paramdim > 0:
-#              print "- parameters", conn.params    
+    for mod in net.modules:
+      print "Module:", mod.name
+      if mod.paramdim > 0:
+        print "--parameters:", mod.params
+      for conn in net.connections[mod]:
+        print "-connection to", conn.outmod.name
+        if conn.paramdim > 0:
+           print "- parameters", conn.params
+      if hasattr(net, "recurrentConns"):
+        print "Recurrent connections"
+        for conn in net.recurrentConns:             
+           print "-", conn.inmod.name, " to", conn.outmod.name
+           if conn.paramdim > 0:
+              print "- parameters", conn.params    
     
 if __name__ == '__main__':
     main()
