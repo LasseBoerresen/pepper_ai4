@@ -22,20 +22,37 @@ import pickle
 
 class soundCleaver:
     def __init__(self):
-        self.sr = 44100        
+        self.sr = 8000#8000        
         #self.numImages = 1
-        self.numPatches = 500
-        print('num samples: \n',int(0.5*self.sr))
-        self.sizePatches = int(0.5*self.sr)#in seconds. Multiply with sampleRate, sr, to get number of saples in patch    #8 must be equal number, to be able to split in half later
+        self.numPatches = 2000 #5000
+        print('num samples: \n',int(2*self.sr))#int(1*self.sr))
+        self.sizePatches = int(2*self.sr)#in seconds. Multiply with sampleRate, sr, to get number of saples in patch    #8 must be equal number, to be able to split in half later
         self.soundDataBase = []
         self.soundLabelDataBase = []
+
+
 #        self.addToSoundDataBase('Cough test.wav',0)        
-        self.addToSoundDataBase('background2.wav',0)        
-        self.addToSoundDataBase('Background3.wav',0)        
-        self.addToSoundDataBase('Background4.wav',0)        
-        self.addToSoundDataBase('Passive.wav',1)        
-        self.addToSoundDataBase('happy.wav',2)        
-        self.addToSoundDataBase('angry.wav',3)
+#        self.addToSoundDataBase('background2.wav',0)        
+#        self.addToSoundDataBase('Background3.wav',0)        
+#        self.addToSoundDataBase('Background4.wav',0)        
+#        self.addToSoundDataBase('Background video.wav',0)
+
+
+        self.addToSoundDataBase('Bachround5.wav',0)   
+#        self.addToSoundDataBase('Passive.wav',1)        
+        self.addToSoundDataBase('Passiv2.wav',1)        
+        self.addToSoundDataBase('Passive reading 0.wav',1)        
+#        self.addToSoundDataBase('happy.wav',2)        
+        self.addToSoundDataBase('Happy 1.wav',2)        
+        self.addToSoundDataBase('Happy reading 1.wav',2)        
+    
+ 
+#       self.addToSoundDataBase('angry.wav',3)
+        self.addToSoundDataBase('Angry 1.wav',3)
+        self.addToSoundDataBase('Angry reading2.wav',3)
+        self.addToSoundDataBase('Angry reading3.wav',3)
+
+
                 
         
 
@@ -53,9 +70,10 @@ class soundCleaver:
             #randPosY = random.randint(self.sizePatches/2, self.imageDataBase[self.numImages-1].shape[1]-self.sizePatches/2)                        
             self.patchDataBase.append(self.soundDataBase[j][randPosX-self.sizePatches/2 : randPosX+self.sizePatches/2])
             self.patchLabelDataBase.append(self.soundLabelDataBase[j])
-        
+            
         self.concSoundArray = np.zeros((self.sizePatches,self.numPatches))
         self.concatenateSoundPatches()
+        print(self.patchDataBase[5])
         
         print('DONE CREATING DATASET')
 #        print(patchDataBase)
@@ -131,38 +149,41 @@ def plotSoundArray(xLeft,sr,fromT, toT):
     y = xLeft[int(sr*fromT):int(sr*fromT)+int(sr*toT)]
     x = np.array(range(len(y)))#/sr
     x = x/float(sr)
-    print x
+    print('x: ',  x)
+    print('y: ',  y)
     
-#    figure(1)
+    figure(1)
     plt.plot(x,y)
 
 
-#def main():
-#    sc = soundCleaver()
+def main():
+    sc = soundCleaver()
+
+    
+    patch = sc.patchDataBase[0]
+
+#    plotSoundArray(patch,44100,0.0,0.1)    
+    
+#    lena = sp.misc.imread('lena.png')
+#    print 'lena',lena
+    patchSpec = sc.spectrogramFromPatch(patch)
 #
+#    print 'patchSpec.shape', patchSpec.shape
+##    NDAPatchSpec = np.array(patchSpec)
 #    
-#    patch = sc.patchDataBase[0]
-#    
-##    lena = sp.misc.imread('lena.png')
-##    print 'lena',lena
-#    patchSpec = sc.spectrogramFromPatch(patch)
-##
-##    print 'patchSpec.shape', patchSpec.shape
-###    NDAPatchSpec = np.array(patchSpec)
-##    
-##    patchSpecInt = np.zeros(patchSpec.shape, dtype=int)
-##    for i in range(patchSpec.shape[0]):
-##        for j in range(patchSpec.shape[1]):
-##            patchSpecInt[i][j] = int(patchSpec[i][j])
-###    print NDAPatchSpec
-##    print 'patchSpecInt', patchSpecInt
-##    smallPatchSpec = sp.misc.imresize(patchSpecInt, 10)
-#    
-#    plt.imshow(patchSpec, interpolation='nearest', origin='lower')
-#    plt.show()
-#    
-#    
-#    
-#    
-#if __name__ == '__main__':
-#    main()
+#    patchSpecInt = np.zeros(patchSpec.shape, dtype=int)
+#    for i in range(patchSpec.shape[0]):
+#        for j in range(patchSpec.shape[1]):
+#            patchSpecInt[i][j] = int(patchSpec[i][j])
+##    print NDAPatchSpec
+#    print 'patchSpecInt', patchSpecInt
+#    smallPatchSpec = sp.misc.imresize(patchSpecInt, 10)
+    
+    plt.imshow(patchSpec, interpolation='nearest', origin='lower')
+    plt.show()
+    
+    
+    
+    
+if __name__ == '__main__':
+    main()

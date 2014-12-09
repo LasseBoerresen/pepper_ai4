@@ -67,6 +67,17 @@ def nudge_dataset(X, Y):
     Y = np.concatenate([Y for _ in range(5)], axis=0)
     return X, Y
 
+def plot_gallery(images, titles, h, w, n_row=3, n_col=4):
+    """Helper function to plot a gallery of portraits"""
+    plt.figure(figsize=(1.8 * n_col, 2.4 * n_row))
+    plt.subplots_adjust(bottom=0, left=.01, right=.99, top=.90, hspace=.35)
+    for i in range(n_row * n_col):
+        plt.subplot(n_row, n_col, i + 1)
+        plt.imshow(images[i].reshape((h, w)), cmap=plt.cm.gray)
+        plt.title(titles[i], size=12)
+        plt.xticks(())
+        plt.yticks(())
+
 def main():
     sc = waveSpec.soundCleaver()
 
@@ -99,9 +110,11 @@ def main():
     
     print('STARTING CONVERTING TO SPECTROGRAMS')
     XpSpec = []
+    
     for i in range(len(Xp)):
         
         spec = sc.spectrogramFromPatch(Xp[i])
+        h,w = spec.shape
 #        print('Xp[i]',Xp[i])
 #        print('spec',spec)
 #        plt.imshow(spec)
@@ -149,22 +162,41 @@ def main():
     # Models we will use
 #    param_grid = {'svm__C': [1e3, 5e3, 1e4, 5e4, 1e5], 'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1], }
 #    clf = GridSearchCV(SVC(kernel='rbf', class_weight='auto'), param_grid)        
+
+
+    n_components = 128
+
+    print("Extracting the top %d spectrograms from %d spectrograms"
+      % (n_components, X_train.shape[0]))
+
+
+    pca = RandomizedPCA(n_components=n_components, whiten=True).fit(X_train)
+    
+    
+    eigenfaces = pca.components_.reshape((n_components, h, w))
+    
+    print("Projecting the input data on the eigenfaces orthonormal basis")
+    t0 = time()
+    X_train = pca.transform(X_train)
+    X_test = pca.transform(X_test)
+    print("done in %0.3fs" % (time() - t0))    
+
     
     svm = SVC(kernel='rbf', class_weight='auto')
     logistic = linear_model.LogisticRegression()
     rbm = BernoulliRBM(random_state=0, verbose=True)
-    pca = decomposition.RandomizedPCA(n_components=64, whiten = True)
+#    pca = decomposition.RandomizedPCA(n_components=64, whiten = True)
 
     param_grid = {'pca__n_components': [32 ,64, 128],'svm__C': [1e3, 1e4, 1e5], 'svm__gamma': [0.0001, 0.001 , 0.1] }
 #    clf = GridSearchCV(SVC(kernel='rbf', class_weight='auto'), param_grid)        
 
-    classifier = GridSearchCV(Pipeline(steps=[('pca',pca), ('svm',svm)]), param_grid=param_grid, verbose=10)
+#    classifier = GridSearchCV(Pipeline(steps=[('pca',pca), ('svm',svm)]), param_grid=param_grid, verbose=10)
 
     
 #    classifier = Pipeline(steps=[('pca',pca), ('svm',svm)])
 
     
-    logisticClassifier = Pipeline(steps=[('pca',pca), ('logistic',logistic)])
+#    logisticClassifier = Pipeline(steps=[('pca',pca), ('logistic',logistic)])
 #    classifier = Pipeline(steps=[('pca',pca),('rbm', rbm), ('logistic', logistic)])
     
     ###############################################################################
@@ -184,9 +216,30 @@ def main():
 #    classifier.fit(X_train, Y_train)
 #    logisticClassifier.fit(X_train, Y_train)
     # Training Logistic regression
-    param_grid = {'logistic__C': [1e0, 1e1,1e2,1e3]}
+    param_grid_svm = {'C': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5], 'gamma': [0.0001, 0.005, 0.001, 0.005, 0.01, 0.05 , 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0] }  
+    param_grid_svm = {'C': [1e-1, 1e0, 1e1], 'gamma': [0.005, 0.01, 0.05] }  
 
-    logistic_classifier = GridSearchCV(logisticClassifier, param_grid,verbose=10, n_jobs = 2)
+    param_grid_log = {'C': [1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4, 1e5]}
+    param_grid_log = {'C': [1e-1, 1e0, 1e1]}
+
+    svm_classifier = GridSearchCV(svm, param_grid_svm, verbose=10, n_jobs = 4)
+    svm_classifier.fit(X_train, Y_train)
+    
+    print("Best parameters set found on development set:")
+    print()
+    print(svm_classifier.best_estimator_)
+    print()
+    print("Grid scores on development set:")
+    print()
+    for params, mean_score, scores in svm_classifier.grid_scores_:
+        print("%0.3f (+/-%0.03f) for %r"
+              % (mean_score, scores.std() / 2, params))
+
+    print()    
+    print()    
+    print()    
+    
+    logistic_classifier = GridSearchCV(logistic, param_grid_log,verbose=10, n_jobs = 2)
     logistic_classifier.fit(X_train, Y_train)
     print("Best parameters set found on development set:")
     print()
@@ -203,11 +256,11 @@ def main():
     ###############################################################################
     # Evaluation
 
-#    print()
-#    print("Logistic regression using RBM features:\n%s\n" % (
-#        metrics.classification_report(
-#            Y_test,
-#            classifier.predict(X_test))))
+    print()
+    print("svm using pca features:\n%s\n" % (
+        metrics.classification_report(
+            Y_test,
+            svm_classifier.predict(X_test))))
     
 #    print()
 #    print("Logistic regression using PCA features:\n%s\n" % (
@@ -215,7 +268,7 @@ def main():
 #            Y_test,
 #            classifier.predict(X_test))))    
     
-    print("Logistic regression using raw pixel features:\n%s\n" % (
+    print("Logistic regression using pca pixel features:\n%s\n" % (
         metrics.classification_report(
             Y_test,
             logistic_classifier.predict(X_test))))
@@ -238,7 +291,10 @@ def main():
 
     
     
-    
+    eigenface_titles = ["spectrogram %d" % i for i in range(eigenfaces.shape[0])]
+    plot_gallery(eigenfaces, eigenface_titles, h, w, 8,8)
+
+plt.show()
     
 if __name__ == '__main__':
     main()
